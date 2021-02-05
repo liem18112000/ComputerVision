@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
+from math import ceil
 
 class RemoveBGInterfaces(object):
 
@@ -24,11 +25,12 @@ class RemoveBG(RemoveBGInterfaces):
         if stragegy is not None and isinstance(stragegy, StragegyInterfaces):
             self._stragegy_ = stragegy
 
-    def show_img_after_remove_bg(self, src):
+    def show_img_after_remove_bg(self, src, item_per_row = 2):
         images = self.remove_bg(src)
         titles = ['Original Image', 'Remove BG']
         for i in range(len(images)):
-            plt.subplot(len(images) / 2, 2, i + 1), plt.imshow(images[i], vmin=0, vmax=255)
+            plt.subplot(ceil(len(images) / item_per_row), item_per_row, i +
+                        1), plt.imshow(images[i], vmin=0, vmax=255)
             plt.title(titles[i])
             plt.xticks([]), plt.yticks([])
         plt.show()
