@@ -169,8 +169,8 @@ class AdaptiveThreshold(ThresholdStragegyInterfaces):
         img = cv.imread(src)
         original_img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         thresh = self._threshold_(self._preprocess_(gray_img))
-        new_img = cv.cvtColor(thresh, cv.COLOR_BGR2RGB)
-        return [original_img, new_img]
+        remove_bg_img = original_img * np.reshape((thresh // 255), (original_img.shape[0], original_img.shape[1], 1))
+        return [original_img, remove_bg_img]
 
     def _preprocess_(self, img):
         if self._preprocessor_ is None:
