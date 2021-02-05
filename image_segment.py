@@ -253,7 +253,7 @@ class Mean_Shift(StragegyInterfaces):
     def apply(self, src):
         img = cv.imread(src)
         original_img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        meanshift_img = self._mean_shift(self._preprocess_(original_img))
+        meanshift_img = self._mean_shift(self._preprocess_(img))
         return [original_img, meanshift_img]
 
     def _preprocess_(self, img):
@@ -271,8 +271,8 @@ class Mean_Shift(StragegyInterfaces):
 
 
         # Estimate bandwidth for meanshift algorithm
-        bandwidth = estimate_bandwidth(flatImg, quantile=0.1, n_samples=10, n_jobs=10)
-        ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+        # bandwidth = estimate_bandwidth(flatImg, quantile=0.1, n_samples=10, n_jobs=10)
+        ms = MeanShift(bandwidth=2, bin_seeding=True)
 
         # Performing meanshift on flatImg
         ms.fit(flatImg)
