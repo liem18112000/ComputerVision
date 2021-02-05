@@ -98,8 +98,12 @@ class CannyEdgeDetection(EdgeDetectionStrategy, Preprocessor):
         self._preprocessor_ = preprocessor
 
     def apply(self, src):
-        img = cv.cvtColor(cv.imread(src), cv.COLOR_BGR2RGB)
-        return [img, self._edge_detection_(self._preprocess_(img))]
+        gray_img = cv.imread(src, 0)
+        img = cv.imread(src)
+        original_img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+        thresh = self._edge_detection_(self._preprocess_(gray_img))
+        remove_bg_img = original_img * np.reshape((thresh // 255), (original_img.shape[0], original_img.shape[1], 1))
+        return [original_img, remove_bg_img]
 
     def apply_preprocess(self, img):
         return self._edge_detection_(self._preprocess_(img))
@@ -240,7 +244,9 @@ class GrabCut(StragegyInterfaces):
         return img
 
 
-class MeanShift(StragegyInterfaces):
+
+from sklearn.cluster import MeanShift, estimate_bandwidth
+class Mean_Shift(StragegyInterfaces):
     def __init__(self, preprocessor=None):
         self._preprocessor_ = preprocessor
 
@@ -256,24 +262,28 @@ class MeanShift(StragegyInterfaces):
         return self._preprocessor_.apply_preprocess(img)
 
     def _mean_shift(self, img):
-        # setup initial location of window
-        x, y, w, h = 300, 200, 100, 50  # simply hardcoded the values
-        track_window = (x, y, w, h)
-        # set up the ROI for tracking
-        roi = img[y:y+h, x:x+w]
-        hsv_roi = cv.cvtColor(roi, cv.COLOR_BGR2HSV)
-        mask = cv.inRange(hsv_roi, np.array((0., 60., 32.)),
-                        np.array((180., 255., 255.)))
-        roi_hist = cv.calcHist([hsv_roi], [0], mask, [180], [0, 180])
-        cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
-        # Setup the termination criteria, either 10 iteration or move by atleast 1 pt
-        term_crit = (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1)
+        # Shape of original image
+        originShape = img.shape
 
-        hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
-        dst = cv.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)
-        # apply meanshift to get the new location
-        ret, track_window = cv.meanShift(dst, track_window, term_crit)
-        # Draw it on image
-        x, y, w, h = track_window
-        img2 = cv.rectangle(img, (x, y), (x+w, y+h), 255, 2)
-        return img2
+        # Converting image into array of dimension [nb of pixels in originImage, 3]
+        # based on r g b intensities
+        flatImg = np.reshape(img, [-1, 3])
+
+
+        # Estimate bandwidth for meanshift algorithm
+        bandwidth = estimate_bandwidth(flatImg, quantile=0.1, n_samples=10, n_jobs=10)
+        ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+
+        # Performing meanshift on flatImg
+        ms.fit(flatImg)
+
+        # (r,g,b) vectors corresponding to the different clusters after meanshift
+        labels = ms.labels_
+
+        # Remaining colors after meanshift
+        cluster_centers = ms.cluster_centers_
+
+        # Displaying segmented image
+        segmentedImg = cluster_centers[np.reshape(labels, originShape[:2])]
+
+        return segmentedImg
